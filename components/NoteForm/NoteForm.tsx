@@ -1,6 +1,6 @@
 "use client";
 
-import { ErrorMessage, Field, Form, Formik, type FormikHelpers } from "formik";
+import { ErrorMessage, Field, Form, Formik } from "formik";
 import css from "./NoteForm.module.css";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Yup from "yup";
@@ -29,22 +29,19 @@ interface NoteFormProps {
 }
 function NoteForm({ closeForm }: NoteFormProps) {
   const queryClient = useQueryClient();
-  const { mutate } = useMutation({
+  const { mutateAsync, isPending } = useMutation({
     mutationKey: ["notes"],
     mutationFn: createNote,
-    onSuccess: () => {
-      queryClient.invalidateQueries({
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
         queryKey: ["notes"],
       });
       closeForm();
     },
   });
-  const handleBookForm = (
-    values: NoteCreate,
-    actions: FormikHelpers<NoteCreate>,
-  ) => {
-    mutate(values);
-    actions.setSubmitting(false);
+
+  async function handleBookForm(values: NoteCreate) {
+    await mutateAsync(values);
   };
 
   return (
@@ -53,6 +50,7 @@ function NoteForm({ closeForm }: NoteFormProps) {
       onSubmit={handleBookForm}
       validationSchema={notesValuesScheme}
     >
+      {({ isSubmitting }) => (
       <Form className={css.form}>
         <div className={css.formGroup}>
           <label htmlFor="title">Title</label>
@@ -92,11 +90,16 @@ function NoteForm({ closeForm }: NoteFormProps) {
           >
             Cancel
           </button>
-          <button type="submit" className={css.submitButton} disabled={false}>
+          <button
+            type="submit"
+            className={css.submitButton}
+            disabled={isSubmitting || isPending}
+          >
             Create note
           </button>
         </div>
       </Form>
+      )}
     </Formik>
   );
 }
